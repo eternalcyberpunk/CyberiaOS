@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+import time
 from pathlib import Path
 import zipfile
 
@@ -35,6 +36,13 @@ def unpack(zip_path: Path, output_dir: Path) -> None:
                 shutil.copyfileobj(source, target)
 
 
+def wait_for_archive(zip_path: Path, interval_seconds: float) -> None:
+    if interval_seconds <= 0:
+        raise ValueError("Polling interval must be greater than 0.")
+    while not zip_path.exists():
+        time.sleep(interval_seconds)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Unpack eternalcyberia-repo.zip into a target directory."
@@ -49,10 +57,24 @@ def main() -> int:
         default=".",
         help="Output directory for extracted files (default: current directory).",
     )
+    parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Fail immediately if the zip file does not exist.",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=1.0,
+        help="Polling interval in seconds while waiting for the zip (default: 1.0).",
+    )
     args = parser.parse_args()
 
     try:
-        unpack(Path(args.zip), Path(args.out))
+        zip_path = Path(args.zip)
+        if not args.no_wait:
+            wait_for_archive(zip_path, args.interval)
+        unpack(zip_path, Path(args.out))
     except (
         FileNotFoundError,
         ValueError,
