@@ -1,0 +1,51 @@
+name: Extract TAR Archive
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '*.tar'
+      - '*.tar.gz'
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract TAR archives
+        run: |
+          # Find all .tar and .tar.gz files in repo root
+          for archive in *.tar *.tar.gz 2>/dev/null; do
+            if [ -f "$archive" ]; then
+              echo "Extracting $archive..."
+              tar -xf "$archive"
+              echo "Extracted: $archive"
+            fi
+          done
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Commit and push extracted files
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git add .
+          git commit -m "Extract archive contents"
+          git push
