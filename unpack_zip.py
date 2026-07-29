@@ -31,7 +31,7 @@ def unpack(zip_path: Path, output_dir: Path) -> None:
                 continue
 
             destination.parent.mkdir(parents=True, exist_ok=True)
-            with archive.open(member, "r") as source, destination.open("wb") as target:
+            with archive.open(member) as source, destination.open("wb") as target:
                 shutil.copyfileobj(source, target)
 
 
