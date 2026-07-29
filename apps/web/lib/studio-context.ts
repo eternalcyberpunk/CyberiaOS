@@ -58,10 +58,14 @@ export function makeStudioContext(args: {
     ai: {
       /** Proposals only. There is no code path from an agent to a document write. */
       async propose(intent, patch) {
+        // Copy into an ArrayBuffer-backed view. Yjs hands back Uint8Array<ArrayBufferLike>,
+        // which TS 5.7+ will not accept as a BodyInit because it could be SharedArrayBuffer.
+        const bytes = new Uint8Array(patch.byteLength);
+        bytes.set(patch);
         const r = await fetch(`${api}/v1/ai/actions`, {
           method: "POST", credentials: "include",
-          headers: { "content-type": "application/octet-stream", "x-intent": intent },
-          body: patch,
+          headers: { "x-intent": intent },
+          body: new Blob([bytes], { type: "application/octet-stream" }),
         });
         return r.json();
       },

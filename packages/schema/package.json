@@ -16,6 +16,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "generate": "prisma generate"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/db.ts"
   }
 }
