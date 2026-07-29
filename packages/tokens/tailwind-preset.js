@@ -1,4 +1,4 @@
-const { color, font, radius } = require("./src/index.ts");
+const { color, font, radius } = require("./src/index");
 
 /** Tailwind preset generated from the same tokens the CSS variables use. */
 module.exports = {

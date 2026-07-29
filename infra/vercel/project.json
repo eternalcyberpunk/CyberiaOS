@@ -1,0 +1,5 @@
+{
+  "project": "@ec/web",
+  "framework": "nextjs",
+  "rootDirectory": "apps/web"
+}

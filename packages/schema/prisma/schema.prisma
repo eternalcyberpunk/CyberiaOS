@@ -2,7 +2,8 @@
 // Live document state lives in Yjs; this holds snapshots and the version log.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
