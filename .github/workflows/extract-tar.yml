@@ -1,4 +1,4 @@
-name: Extract TAR Archive
+name: Extract Archive (TAR/ZIP)
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     paths:
       - '*.tar'
       - '*.tar.gz'
+      - '*.zip'
 
 jobs:
   extract:
@@ -17,13 +18,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find and extract TAR archives
+      - name: Find and extract archives
         run: |
-          # Find all .tar and .tar.gz files in repo root
-          for archive in *.tar *.tar.gz 2>/dev/null; do
+          # Extract .tar.gz files
+          for archive in *.tar.gz; do
+            if [ -f "$archive" ]; then
+              echo "Extracting $archive..."
+              tar -xzf "$archive"
+              echo "Extracted: $archive"
+            fi
+          done
+          
+          # Extract .tar files
+          for archive in *.tar; do
             if [ -f "$archive" ]; then
               echo "Extracting $archive..."
               tar -xf "$archive"
+              echo "Extracted: $archive"
+            fi
+          done
+          
+          # Extract .zip files
+          for archive in *.zip; do
+            if [ -f "$archive" ]; then
+              echo "Extracting $archive..."
+              unzip -q "$archive"
               echo "Extracted: $archive"
             fi
           done
