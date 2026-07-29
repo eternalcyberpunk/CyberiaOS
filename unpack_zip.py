@@ -45,8 +45,13 @@ def unpack(zip_path: Path, output_dir: Path) -> None:
                 shutil.copyfileobj(source, target)
 
 
-def wait_for_archive(zip_path: Path, interval_seconds: float) -> None:
+def wait_for_archive(
+    zip_path: Path, interval_seconds: float, timeout_seconds: float | None = None
+) -> None:
+    started = time.monotonic()
     while not zip_path.exists():
+        if timeout_seconds is not None and (time.monotonic() - started) >= timeout_seconds:
+            raise TimeoutError(f"Timed out waiting for archive: {zip_path}")
         time.sleep(interval_seconds)
 
 
@@ -75,16 +80,23 @@ def main() -> int:
         default=1.0,
         help="Polling interval in seconds while waiting for the zip (default: 1.0).",
     )
+    parser.add_argument(
+        "--timeout",
+        type=positive_float,
+        default=None,
+        help="Optional maximum seconds to wait for zip detection.",
+    )
     args = parser.parse_args()
 
     try:
         zip_path = Path(args.zip)
         if not args.no_wait:
-            wait_for_archive(zip_path, args.interval)
+            wait_for_archive(zip_path, args.interval, args.timeout)
         unpack(zip_path, Path(args.out))
     except (
         FileNotFoundError,
         ValueError,
+        TimeoutError,
         zipfile.BadZipFile,
         OSError,
         PermissionError,
