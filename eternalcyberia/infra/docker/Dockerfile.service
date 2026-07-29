@@ -1,0 +1,32 @@
+# Build any backend service from the monorepo:
+#   docker build -f infra/docker/Dockerfile.service --build-arg PKG=@ec/realtime .
+#
+# turbo prune keeps the build context to only the packages the service needs,
+# so a change in apps/web never invalidates the api image layer cache.
+
+ARG NODE=node:20-alpine
+
+FROM ${NODE} AS base
+RUN corepack enable && apk add --no-cache libc6-compat
+WORKDIR /app
+
+FROM base AS pruner
+ARG PKG
+COPY . .
+RUN pnpm dlx turbo@2 prune "$PKG" --docker
+
+FROM base AS builder
+ARG PKG
+COPY --from=pruner /app/out/json/ .
+RUN pnpm install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+RUN pnpm turbo run build --filter="$PKG"...
+
+FROM base AS runner
+ARG PKG
+ENV NODE_ENV=production
+RUN addgroup -S ec && adduser -S ec -G ec
+COPY --from=builder --chown=ec:ec /app .
+USER ec
+# Each service exposes /healthz and reads its port from the environment.
+CMD ["node", "--enable-source-maps", "dist/server.js"]

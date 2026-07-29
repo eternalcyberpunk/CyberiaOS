@@ -1,0 +1,31 @@
+:root{
+  --ec-void:#05060c;
+  --ec-navy:#0a1024;
+  --ec-glass:rgba(12,18,40,.55);
+  --ec-violet:#7c4dff;
+  --ec-cyan:#22e0ff;
+  --ec-magenta:#ff2fd0;
+  --ec-ink:#eef2ff;
+  --ec-dim:#7d86a8;
+  --ec-edge:rgba(238,242,255,.08);
+
+  --ec-font-display:'Chakra Petch',system-ui,sans-serif;
+  --ec-font-body:'Sora',system-ui,-apple-system,sans-serif;
+  --ec-font-mono:'Space Mono',ui-monospace,monospace;
+
+  --ec-r-control:10px; --ec-r-panel:16px; --ec-r-sheet:22px;
+  --ec-ease:cubic-bezier(.22,1,.36,1);
+  --ec-t-micro:120ms; --ec-t-panel:320ms; --ec-t-sheet:450ms;
+
+  --ec-dock-h:64px;
+  --ec-safe-t:env(safe-area-inset-top,0px);
+  --ec-safe-b:env(safe-area-inset-bottom,0px);
+}
+
+/* Preference variants resolve here so components never branch on user settings. */
+@media (prefers-reduced-motion:reduce){
+  :root{ --ec-t-micro:0ms; --ec-t-panel:60ms; --ec-t-sheet:60ms; }
+}
+@media (prefers-contrast:more){
+  :root{ --ec-dim:#aab4d4; --ec-edge:rgba(238,242,255,.22); }
+}
