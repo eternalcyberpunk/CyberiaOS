@@ -28,11 +28,14 @@ jobs:
             fi
           done
           
-          # Extract .tar files (skip if invalid)
+          # Extract .tar files (fall back to unzip if not a valid tar archive)
           for archive in *.tar; do
             if [ -f "$archive" ]; then
               echo "Extracting $archive..."
-              tar -xf "$archive" 2>/dev/null || echo "Skipping invalid .tar: $archive"
+              if ! tar -xf "$archive" 2>/dev/null; then
+                echo "tar failed for $archive, trying unzip..."
+                unzip -q "$archive" || echo "Skipping invalid archive: $archive"
+              fi
             fi
           done
           
