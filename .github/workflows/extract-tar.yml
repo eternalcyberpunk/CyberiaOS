@@ -24,17 +24,15 @@ jobs:
           for archive in *.tar.gz; do
             if [ -f "$archive" ]; then
               echo "Extracting $archive..."
-              tar -xzf "$archive"
-              echo "Extracted: $archive"
+              tar -xzf "$archive" 2>/dev/null || echo "Skipping invalid .tar.gz: $archive"
             fi
           done
           
-          # Extract .tar files
+          # Extract .tar files (skip if invalid)
           for archive in *.tar; do
             if [ -f "$archive" ]; then
               echo "Extracting $archive..."
-              tar -xf "$archive"
-              echo "Extracted: $archive"
+              tar -xf "$archive" 2>/dev/null || echo "Skipping invalid .tar: $archive"
             fi
           done
           
@@ -42,8 +40,7 @@ jobs:
           for archive in *.zip; do
             if [ -f "$archive" ]; then
               echo "Extracting $archive..."
-              unzip -q "$archive"
-              echo "Extracted: $archive"
+              unzip -q "$archive" 2>/dev/null || echo "Skipping invalid .zip: $archive"
             fi
           done
 
