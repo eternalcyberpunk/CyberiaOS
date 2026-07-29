@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from pathlib import Path
 import zipfile
@@ -11,7 +12,7 @@ import zipfile
 def _safe_path(target_dir: Path, member_name: str) -> Path:
     candidate = (target_dir / member_name).resolve()
     base = target_dir.resolve()
-    if candidate != base and base not in candidate.parents:
+    if not (candidate == base or base in candidate.parents):
         raise ValueError(f"Unsafe path in archive: {member_name}")
     return candidate
 
@@ -24,8 +25,14 @@ def unpack(zip_path: Path, output_dir: Path) -> None:
 
     with zipfile.ZipFile(zip_path, "r") as archive:
         for member in archive.infolist():
-            _safe_path(output_dir, member.filename)
-        archive.extractall(path=output_dir)
+            destination = _safe_path(output_dir, member.filename)
+            if member.is_dir():
+                destination.mkdir(parents=True, exist_ok=True)
+                continue
+
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(member, "r") as source, destination.open("wb") as target:
+                shutil.copyfileobj(source, target)
 
 
 def main() -> int:
