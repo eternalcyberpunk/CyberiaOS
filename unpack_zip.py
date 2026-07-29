@@ -9,7 +9,7 @@ from pathlib import Path
 import zipfile
 
 
-def _safe_path(target_dir: Path, member_name: str) -> Path:
+def ensure_safe_path(target_dir: Path, member_name: str) -> Path:
     candidate = (target_dir / member_name).resolve()
     base = target_dir.resolve()
     if not (candidate == base or base in candidate.parents):
@@ -25,7 +25,7 @@ def unpack(zip_path: Path, output_dir: Path) -> None:
 
     with zipfile.ZipFile(zip_path, "r") as archive:
         for member in archive.infolist():
-            destination = _safe_path(output_dir, member.filename)
+            destination = ensure_safe_path(output_dir, member.filename)
             if member.is_dir():
                 destination.mkdir(parents=True, exist_ok=True)
                 continue
@@ -53,7 +53,13 @@ def main() -> int:
 
     try:
         unpack(Path(args.zip), Path(args.out))
-    except (FileNotFoundError, ValueError, zipfile.BadZipFile) as exc:
+    except (
+        FileNotFoundError,
+        ValueError,
+        zipfile.BadZipFile,
+        OSError,
+        PermissionError,
+    ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     return 0
