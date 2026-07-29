@@ -17,6 +17,7 @@
     "@ec/ui": "workspace:*",
     "@ec/tokens": "workspace:*",
     "@ec/studio-sdk": "workspace:*",
+    "@ec/studio-tar": "workspace:*",
     "@ec/crdt": "workspace:*",
     "@ec/schema": "workspace:*",
     "zustand": "^4.5.5",

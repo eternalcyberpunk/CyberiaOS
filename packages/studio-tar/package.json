@@ -1,0 +1,21 @@
+{
+  "name": "@ec/studio-tar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "ec": {
+    "budgetKb": 90
+  },
+  "dependencies": {
+    "@ec/studio-sdk": "workspace:*",
+    "@ec/crdt": "workspace:*",
+    "yjs": "^13.6.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  }
+}
