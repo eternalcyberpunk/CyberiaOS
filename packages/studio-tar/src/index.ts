@@ -108,7 +108,7 @@ const studio: StudioModule = {
 
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = ".tar,.tar.gz,.tgz,.tar.bz2,.tbz2";
+      input.accept = ".tar,.tar.gz,.tgz";
       input.style.display = "none";
       root.appendChild(input);
 
@@ -139,8 +139,52 @@ const studio: StudioModule = {
       root.appendChild(drop);
     }
 
+    // Keep a reference to the preview container so selection can swap it without
+    // rebuilding the entire tree (important for archives with many entries).
+    let previewEl: HTMLDivElement | null = null;
+    let treeNodes: HTMLDivElement[] = [];
+
+    function renderPreview() {
+      if (!previewEl) return;
+      previewEl.innerHTML = "";
+      if (selectedIdx >= 0 && selectedIdx < entries.length) {
+        const sel = entries[selectedIdx];
+        if (sel.type === "symlink") {
+          const div = document.createElement("div");
+          div.className = "tar-preview-symlink";
+          div.textContent = `→ ${sel.linkname ?? "(no target)"}`;
+          previewEl.appendChild(div);
+        } else if (looksLikeText(sel)) {
+          const pre = document.createElement("pre");
+          pre.className = "tar-preview-text";
+          pre.textContent = new TextDecoder("utf-8", { fatal: false }).decode(sel.data);
+          previewEl.appendChild(pre);
+        } else {
+          const div = document.createElement("div");
+          div.className = "tar-preview-binary";
+          div.textContent = `Binary file · ${fmtSize(sel.size)}`;
+          previewEl.appendChild(div);
+        }
+      } else {
+        const empty = document.createElement("div");
+        empty.className = "tar-preview-empty";
+        empty.textContent = "select a file to preview";
+        previewEl.appendChild(empty);
+      }
+    }
+
+    function selectEntry(idx: number) {
+      if (treeNodes[selectedIdx]) treeNodes[selectedIdx].classList.remove("selected");
+      selectedIdx = idx;
+      if (treeNodes[selectedIdx]) treeNodes[selectedIdx].classList.add("selected");
+      ctx.doc.transact(() => tarMap.set("selectedFile", entries[idx].name), "local");
+      renderPreview();
+    }
+
     function renderExplorer() {
       root.innerHTML = "";
+      treeNodes = [];
+      previewEl = null;
 
       // header
       const hdr = document.createElement("div");
@@ -155,6 +199,8 @@ const studio: StudioModule = {
         entries = [];
         selectedIdx = -1;
         archiveName = "";
+        treeNodes = [];
+        previewEl = null;
         ctx.doc.transact(() => tarMap.clear(), "local");
         renderDropZone();
       });
@@ -179,9 +225,9 @@ const studio: StudioModule = {
       tree.className = "tar-tree";
       body.appendChild(tree);
 
-      const preview = document.createElement("div");
-      preview.className = "tar-preview";
-      body.appendChild(preview);
+      previewEl = document.createElement("div");
+      previewEl.className = "tar-preview";
+      body.appendChild(previewEl);
 
       for (let i = 0; i < entries.length; i++) {
         const e = entries[i];
@@ -218,41 +264,14 @@ const studio: StudioModule = {
 
         if (isClickable) {
           const idx = i;
-          node.addEventListener("click", () => {
-            selectedIdx = idx;
-            ctx.doc.transact(() => tarMap.set("selectedFile", e.name), "local");
-            renderExplorer();
-          });
+          node.addEventListener("click", () => selectEntry(idx));
         }
 
+        treeNodes.push(node);
         tree.appendChild(node);
       }
 
-      // preview pane
-      if (selectedIdx >= 0 && selectedIdx < entries.length) {
-        const sel = entries[selectedIdx];
-        if (sel.type === "symlink") {
-          const div = document.createElement("div");
-          div.className = "tar-preview-symlink";
-          div.textContent = `→ ${sel.linkname ?? "(no target)"}`;
-          preview.appendChild(div);
-        } else if (looksLikeText(sel)) {
-          const pre = document.createElement("pre");
-          pre.className = "tar-preview-text";
-          pre.textContent = new TextDecoder("utf-8", { fatal: false }).decode(sel.data);
-          preview.appendChild(pre);
-        } else {
-          const div = document.createElement("div");
-          div.className = "tar-preview-binary";
-          div.textContent = `Binary file · ${fmtSize(sel.size)}`;
-          preview.appendChild(div);
-        }
-      } else {
-        const empty = document.createElement("div");
-        empty.className = "tar-preview-empty";
-        empty.textContent = "select a file to preview";
-        preview.appendChild(empty);
-      }
+      renderPreview();
     }
 
     function renderError(msg: string) {
