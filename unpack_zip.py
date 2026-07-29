@@ -10,6 +10,15 @@ from pathlib import Path
 import zipfile
 
 
+def positive_float(value: str) -> float:
+    parsed = float(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError(
+            "Polling interval must be a positive number (in seconds)."
+        )
+    return parsed
+
+
 def ensure_safe_path(target_dir: Path, member_name: str) -> Path:
     candidate = (target_dir / member_name).resolve()
     base = target_dir.resolve()
@@ -37,15 +46,13 @@ def unpack(zip_path: Path, output_dir: Path) -> None:
 
 
 def wait_for_archive(zip_path: Path, interval_seconds: float) -> None:
-    if interval_seconds <= 0:
-        raise ValueError("Polling interval must be greater than 0.")
     while not zip_path.exists():
         time.sleep(interval_seconds)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Unpack eternalcyberia-repo.zip into a target directory."
+        description="Unpack a zip archive into a target directory."
     )
     parser.add_argument(
         "--zip",
@@ -64,7 +71,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--interval",
-        type=float,
+        type=positive_float,
         default=1.0,
         help="Polling interval in seconds while waiting for the zip (default: 1.0).",
     )
