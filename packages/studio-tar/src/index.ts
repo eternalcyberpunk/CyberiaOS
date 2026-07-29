@@ -185,7 +185,7 @@ const studio: StudioModule = {
 
       for (let i = 0; i < entries.length; i++) {
         const e = entries[i];
-        const depth = (e.name.match(/\//g) ?? []).length;
+        const depth = e.name.split("/").filter(Boolean).length - 1;
         const displayName = e.name.split("/").pop() || e.name;
 
         const node = document.createElement("div");
