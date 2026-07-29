@@ -1,0 +1,339 @@
+// EternalCyberia OS — source of truth for identity, ownership and money.
+// Live document state lives in Yjs; this holds snapshots and the version log.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ─────────────────────────── identity ───────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  handle       String   @unique
+  displayName  String
+  email        String?  @unique
+  avatarHash   String?
+  signingKey   String   // ed25519 public key — provenance survives export
+  createdAt    DateTime @default(now())
+
+  accounts     Account[]
+  credentials  Credential[]
+  sessions     Session[]
+  mfaFactors   MfaFactor[]
+  memberships  Membership[]
+  assets       Asset[]
+
+  @@index([createdAt])
+}
+
+model Account {
+  id             String @id @default(cuid())
+  userId         String
+  provider       String // github | google | apple
+  providerUserId String
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+}
+
+model Credential {
+  id           String   @id @default(cuid())
+  userId       String
+  publicKey    Bytes    // WebAuthn passkey
+  counter      BigInt   @default(0)
+  transports   String[]
+  deviceLabel  String?
+  lastUsedAt   DateTime?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  deviceHash String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model MfaFactor {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      MfaKind
+  secret    String?
+  verified  Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum MfaKind {
+  TOTP
+  WEBAUTHN
+  RECOVERY
+}
+
+// ─────────────────────────── tenancy ───────────────────────────
+
+model Org {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  personal  Boolean  @default(false) // personal accounts are an org of one
+  createdAt DateTime @default(now())
+
+  members   Membership[]
+  projects  Project[]
+}
+
+model Membership {
+  id     String @id @default(cuid())
+  orgId  String
+  userId String
+  role   Role   @default(EDITOR)
+
+  org    Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  REVIEWER
+  VIEWER
+}
+
+// ─────────────────────────── work ───────────────────────────
+
+model Project {
+  id            String     @id @default(cuid())
+  orgId         String
+  title         String
+  studioId      String
+  visibility    Visibility @default(PRIVATE)
+  headVersionId String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  org           Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  versions      ProjectVersion[]
+  collaborators Collaborator[]
+  processEvents ProcessEvent[]
+
+  @@index([orgId, updatedAt])
+  @@index([studioId])
+}
+
+enum Visibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
+model ProjectVersion {
+  id         String   @id @default(cuid())
+  projectId  String
+  seq        Int      // monotonic per project
+  hash       String   // blake3 of the Yjs state vector
+  storageKey String   // object key holding the snapshot
+  authorIds  String[]
+  message    String?
+  createdAt  DateTime @default(now())
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, seq])
+}
+
+model Collaborator {
+  projectId String
+  userId    String
+  role      Role     @default(EDITOR)
+  addedAt   DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+}
+
+/// The process reel: what happened, when, by whom. Never deleted, only archived.
+model ProcessEvent {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String?
+  kind      String   // "edit" | "render" | "import" | "ai_accept" | "publish"
+  payload   Json
+  at        DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, at])
+}
+
+// ─────────────────────────── assets & lineage ───────────────────────────
+
+model Asset {
+  id        String    @id @default(cuid())
+  hash      String    @unique // blake3 content address — dedupes platform-wide
+  kind      AssetKind
+  bytes     BigInt
+  mime      String
+  creatorId String
+  licenseId String?
+  createdAt DateTime  @default(now())
+
+  creator   User        @relation(fields: [creatorId], references: [id])
+  parents   AssetEdge[] @relation("child")
+  children  AssetEdge[] @relation("parent")
+
+  @@index([creatorId, createdAt])
+}
+
+enum AssetKind {
+  IMAGE
+  VIDEO
+  AUDIO
+  MESH
+  TEXTURE
+  CODE
+  DOCUMENT
+  MODEL
+  OTHER
+}
+
+/// The lineage DAG. Credit, revenue splits and licence checks all walk this.
+model AssetEdge {
+  parentId String
+  childId  String
+  relation EdgeKind
+  weight   Decimal @default(1)
+
+  parent   Asset @relation("parent", fields: [parentId], references: [id], onDelete: Cascade)
+  child    Asset @relation("child", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@id([parentId, childId, relation])
+  @@index([childId])
+}
+
+enum EdgeKind {
+  DERIVED_FROM
+  FORK_OF
+  GENERATED_BY
+  INCLUDES
+}
+
+// ─────────────────────────── compute ───────────────────────────
+
+model Workspace {
+  id          String          @id @default(cuid())
+  ownerId     String
+  machineType String          // "cpu.small" | "gpu.a10" | "desktop.win"
+  status      WorkspaceStatus @default(STARTING)
+  startedAt   DateTime        @default(now())
+  stoppedAt   DateTime?
+  idleSince   DateTime?       // reaper at 30 minutes
+
+  @@index([ownerId, status])
+}
+
+enum WorkspaceStatus {
+  STARTING
+  RUNNING
+  IDLE
+  STOPPING
+  STOPPED
+  FAILED
+}
+
+model Job {
+  id           String    @id @default(cuid())
+  ownerId      String
+  projectId    String?
+  type         String    // render | transcode | infer | embed
+  status       JobStatus @default(QUEUED)
+  estUsd       Decimal
+  actualUsd    Decimal?
+  payload      Json
+  resultHash   String?
+  createdAt    DateTime  @default(now())
+  finishedAt   DateTime?
+
+  @@index([ownerId, createdAt])
+  @@index([status])
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+// ─────────────────────────── ai ───────────────────────────
+
+model AiSession {
+  id        String   @id @default(cuid())
+  projectId String?
+  orgId     String
+  createdAt DateTime @default(now())
+  messages  AiMessage[]
+  actions   AiAction[]
+}
+
+model AiMessage {
+  id        String    @id @default(cuid())
+  sessionId String
+  role      String    // user | assistant | tool
+  content   Json
+  costUsd   Decimal   @default(0)
+  at        DateTime  @default(now())
+  session   AiSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+/// A proposed change. Agents never write to a document directly.
+model AiAction {
+  id         String       @id @default(cuid())
+  sessionId  String
+  projectId  String
+  intent     String
+  patchKey   String       // object key holding the Yjs update
+  state      ActionState  @default(PROPOSED)
+  reviewedBy String?
+  reviewedAt DateTime?
+
+  session    AiSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, state])
+}
+
+enum ActionState {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+// ─────────────────────────── platform ───────────────────────────
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  actorId  String?
+  action   String
+  subject  String
+  meta     Json
+  at       DateTime @default(now())
+
+  @@index([subject, at])
+  @@index([actorId, at])
+}
