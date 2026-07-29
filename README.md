@@ -5,7 +5,7 @@
 Run:
 
 ```bash
-python3 /home/runner/work/CyberiaOS/CyberiaOS/unpack_zip.py
+python3 unpack_zip.py
 ```
 
 Optional flags:
