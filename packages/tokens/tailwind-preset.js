@@ -1,4 +1,8 @@
-/** Tailwind preset generated from the same tokens the CSS variables use. */
+/**
+ * Tailwind preset. Values point at the CSS variables emitted by tokens.css,
+ * so this file stays plain CJS and never imports TypeScript — a preset that
+ * requires a .ts file breaks any build that loads config without a transpiler.
+ */
 module.exports = {
   theme: {
     extend: {
