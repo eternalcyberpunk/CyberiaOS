@@ -1,4 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "installCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@ec/web...",
+  "outputDirectory": ".next",
+  "ignoreCommand": "npx turbo-ignore @ec/web",
+  "regions": [
+    "iad1"
+  ],
+  "github": {
+    "silent": true
+  }
 }
