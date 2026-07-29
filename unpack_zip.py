@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 import zipfile
 
@@ -43,7 +44,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    unpack(Path(args.zip), Path(args.out))
+    try:
+        unpack(Path(args.zip), Path(args.out))
+    except (FileNotFoundError, ValueError, zipfile.BadZipFile) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 
