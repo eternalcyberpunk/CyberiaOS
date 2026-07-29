@@ -16,4 +16,4 @@ Optional flags:
 - `--out` to choose a different extraction directory
 - `--no-wait` to fail immediately if the zip is missing
 - `--interval` to control how often detection is checked while waiting
-- `--timeout` to set a maximum wait time for detection
+- `--timeout` to set a maximum wait time for detection (default: 300 seconds)

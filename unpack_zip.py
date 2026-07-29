@@ -13,9 +13,7 @@ import zipfile
 def positive_float(value: str) -> float:
     parsed = float(value)
     if parsed <= 0:
-        raise argparse.ArgumentTypeError(
-            "Polling interval must be a positive number (in seconds)."
-        )
+        raise argparse.ArgumentTypeError("Value must be a positive number (in seconds).")
     return parsed
 
 
@@ -46,13 +44,11 @@ def unpack(zip_path: Path, output_dir: Path) -> None:
 
 
 def wait_for_archive(
-    zip_path: Path, interval_seconds: float, timeout_seconds: float | None = None
+    zip_path: Path, interval_seconds: float, timeout_seconds: float
 ) -> None:
-    deadline = (
-        time.monotonic() + timeout_seconds if timeout_seconds is not None else None
-    )
+    deadline = time.monotonic() + timeout_seconds
     while not zip_path.exists():
-        if deadline is not None and time.monotonic() >= deadline:
+        if time.monotonic() >= deadline:
             raise TimeoutError(f"Timed out waiting for archive: {zip_path}")
         time.sleep(interval_seconds)
 
@@ -84,16 +80,14 @@ def main() -> int:
     )
     parser.add_argument(
         "--timeout",
-        type=float,
-        default=None,
-        help="Optional maximum seconds to wait for zip detection.",
+        type=positive_float,
+        default=300.0,
+        help="Maximum seconds to wait for zip detection (default: 300).",
     )
     args = parser.parse_args()
 
     try:
         zip_path = Path(args.zip)
-        if args.timeout is not None and args.timeout <= 0:
-            raise ValueError("Timeout must be a positive number (in seconds).")
         if not args.no_wait:
             wait_for_archive(zip_path, args.interval, args.timeout)
         unpack(zip_path, Path(args.out))
