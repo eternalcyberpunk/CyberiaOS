@@ -197,15 +197,24 @@ const studio: StudioModule = {
         node.style.paddingLeft = `${12 + depth * 10}px`;
 
         const icon = e.type === "dir" ? "📁" : e.type === "symlink" ? "🔗" : "📄";
-        const sizeSpan =
-          e.type === "file"
-            ? `<span class="tar-node-size">${fmtSize(e.size)}</span>`
-            : "";
 
-        node.innerHTML =
-          `<span class="tar-node-icon">${icon}</span>` +
-          `<span class="tar-node-name">${displayName}</span>` +
-          sizeSpan;
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "tar-node-icon";
+        iconSpan.textContent = icon;
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "tar-node-name";
+        nameSpan.textContent = displayName;
+
+        node.appendChild(iconSpan);
+        node.appendChild(nameSpan);
+
+        if (e.type === "file") {
+          const sizeSpan = document.createElement("span");
+          sizeSpan.className = "tar-node-size";
+          sizeSpan.textContent = fmtSize(e.size);
+          node.appendChild(sizeSpan);
+        }
 
         if (isClickable) {
           const idx = i;
