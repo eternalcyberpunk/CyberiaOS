@@ -12,6 +12,14 @@ registerStudio(
   () => import("@ec/studio-image")
 );
 
+registerStudio(
+  {
+    id: "tar", name: "Tar Unzip", kind: "lab", tier: 1,
+    budgetKb: 90, capabilities: ["fs"], roots: ["tar.entries"],
+  },
+  () => import("@ec/studio-tar")
+);
+
 // M3 adds: code, audio, video, 3d — same shape, separate chunks.
 
 export const STUDIOS = registry.list(3);
