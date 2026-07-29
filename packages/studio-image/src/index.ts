@@ -28,7 +28,9 @@ const studio: StudioModule = {
     const write = makeParamWriter(ctx.doc, "image.params");
     if (!params.has("threshold")) write("threshold", 0.55);
 
-    let source: ImageBitmap | null = null;
+    // Held on an object so the union type survives; a plain `let` that is only
+    // ever assigned null gets narrowed away and dispose() stops typechecking.
+    const state: { source: ImageBitmap | null } = { source: null };
     let dirty = true;
 
     // Any peer changing a parameter marks us dirty — this is all multiplayer takes.
@@ -60,7 +62,7 @@ const studio: StudioModule = {
         if (!dirty) return;          // the shell calls us every frame; we opt out
         dirty = false;
         const threshold = (params.get("threshold") as number) ?? 0.55;
-        if (source) g.drawImage(source, 0, 0, canvas.width, canvas.height);
+        if (state.source) g.drawImage(state.source, 0, 0, canvas.width, canvas.height);
         else {
           const grad = g.createLinearGradient(0, 0, canvas.width, canvas.height);
           grad.addColorStop(0, "#120a2e");
@@ -76,7 +78,7 @@ const studio: StudioModule = {
       dispose() {
         params.unobserve(onChange);
         canvas.removeEventListener("pointermove", onPointer);
-        source?.close();
+        state.source?.close();
         canvas.remove();
       },
     };

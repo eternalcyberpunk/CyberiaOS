@@ -8,8 +8,6 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,

@@ -28,10 +28,11 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @ec/schema run generate   # tests import generated types
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
       - run: pnpm build
+      - run: pnpm test
       - name: Bundle budgets
         run: pnpm budget            # fails when a studio exceeds manifest.budgetKb
       - name: E2E (mobile + desktop)
